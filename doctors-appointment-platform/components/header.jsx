@@ -1,4 +1,6 @@
-import React from "react";
+"use client";
+
+import React, { useEffect, useState } from "react";
 import { Button } from "./ui/button";
 import {
   Calendar,
@@ -8,16 +10,67 @@ import {
   User,
 } from "lucide-react";
 import Link from "next/link";
-import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
-import { checkUser } from "@/lib/checkUser";
+import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from "@clerk/nextjs";
 import { Badge } from "./ui/badge";
-import { checkAndAllocateCredits } from "@/actions/credits";
 import Image from "next/image";
 
-export default async function Header() {
-  const user = await checkUser();
-  if (user?.role === "PATIENT") {
-    await checkAndAllocateCredits(user);
+export default function Header() {
+  const { user: clerkUser, isLoaded } = useUser();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      if (!clerkUser) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/user/check', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ clerkUserId: clerkUser.id }),
+        });
+
+        if (response.ok) {
+          const userData = await response.json();
+          setUser(userData);
+        }
+      } catch (error) {
+        console.error('Error fetching user:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (isLoaded) {
+      fetchUser();
+    }
+  }, [clerkUser, isLoaded]);
+
+  if (!isLoaded || loading) {
+    return (
+      <header className="fixed top-0 w-full border-b bg-background/80 backdrop-blur-md z-10 supports-[backdrop-filter]:bg-background/60">
+        <nav className="container mx-auto px-4 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 cursor-pointer">
+            <Image
+              src="/logo-single.png"
+              alt="Medimeet Logo"
+              width={200}
+              height={60}
+              className="h-10 w-auto object-contain"
+            />
+          </Link>
+          <div className="flex items-center space-x-2">
+            <div className="h-10 w-20 bg-gray-200 animate-pulse rounded"></div>
+          </div>
+        </nav>
+      </header>
+    );
   }
 
   return (
