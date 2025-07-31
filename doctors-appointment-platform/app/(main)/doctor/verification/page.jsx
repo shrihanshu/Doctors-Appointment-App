@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { ClipboardCheck, AlertCircle, XCircle } from "lucide-react";
 import {
   Card,
@@ -8,16 +11,68 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { getCurrentUser } from "@/actions/onboarding";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 
-export default async function VerificationPage() {
-  // Get complete user profile
-  const user = await getCurrentUser();
+export default function VerificationPage() {
+  const { user: clerkUser, isLoaded } = useUser();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
-  // If already verified, redirect to dashboard
-  if (user?.verificationStatus === "VERIFIED") {
-    redirect("/doctor");
+  useEffect(() => {
+    const fetchUser = async () => {
+      if (!clerkUser) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/user/check', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ clerkUserId: clerkUser.id }),
+        });
+
+        if (response.ok) {
+          const userData = await response.json();
+          setUser(userData);
+
+          // If already verified, redirect to dashboard
+          if (userData?.verificationStatus === "VERIFIED") {
+            router.push("/doctor");
+            return;
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (isLoaded) {
+      fetchUser();
+    }
+  }, [clerkUser, isLoaded, router]);
+
+  if (!isLoaded || loading) {
+    return (
+      <div className="container mx-auto px-4 py-12">
+        <div className="max-w-2xl mx-auto">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/3 mx-auto mb-4"></div>
+            <div className="h-64 bg-gray-200 rounded"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
   }
 
   const isRejected = user?.verificationStatus === "REJECTED";

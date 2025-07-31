@@ -1,32 +1,128 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { getDoctorAppointments, getDoctorAvailability } from "@/actions/doctor";
 import { AvailabilitySettings } from "./_components/availability-settings";
-import { getCurrentUser } from "@/actions/onboarding";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import { Calendar, Clock, DollarSign } from "lucide-react";
 import DoctorAppointmentsList from "./_components/appointments-list";
-import { getDoctorEarnings, getDoctorPayouts } from "@/actions/payout";
 import { DoctorEarnings } from "./_components/doctor-earnings";
 
-export default async function DoctorDashboardPage() {
-  const user = await getCurrentUser();
+export default function DoctorDashboardPage() {
+  const { user: clerkUser, isLoaded } = useUser();
+  const [user, setUser] = useState(null);
+  const [appointments, setAppointments] = useState([]);
+  const [slots, setSlots] = useState([]);
+  const [earnings, setEarnings] = useState({});
+  const [payouts, setPayouts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
-  const [appointmentsData, availabilityData, earningsData, payoutsData] =
-    await Promise.all([
-      getDoctorAppointments(),
-      getDoctorAvailability(),
-      getDoctorEarnings(),
-      getDoctorPayouts(),
-    ]);
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!clerkUser) {
+        setLoading(false);
+        return;
+      }
 
-  //   // Redirect if not a doctor
-  if (user?.role !== "DOCTOR") {
-    redirect("/onboarding");
+      try {
+        // Fetch user data
+        const userResponse = await fetch('/api/user/check', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ clerkUserId: clerkUser.id }),
+        });
+
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          setUser(userData);
+
+          // Redirect if not a doctor
+          if (userData?.role !== "DOCTOR") {
+            router.push("/onboarding");
+            return;
+          }
+
+          // If not verified, redirect to verification
+          if (userData?.verificationStatus !== "VERIFIED") {
+            router.push("/doctor/verification");
+            return;
+          }
+
+          // Fetch all doctor data
+          const [appointmentsRes, availabilityRes, earningsRes, payoutsRes] = await Promise.all([
+            fetch('/api/doctor/appointments', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ clerkUserId: clerkUser.id }),
+            }),
+            fetch('/api/doctor/availability', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ clerkUserId: clerkUser.id }),
+            }),
+            fetch('/api/doctor/earnings', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ clerkUserId: clerkUser.id }),
+            }),
+            fetch('/api/doctor/payouts', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ clerkUserId: clerkUser.id }),
+            }),
+          ]);
+
+          if (appointmentsRes.ok) {
+            const appointmentsData = await appointmentsRes.json();
+            setAppointments(appointmentsData.appointments || []);
+          }
+
+          if (availabilityRes.ok) {
+            const availabilityData = await availabilityRes.json();
+            setSlots(availabilityData.slots || []);
+          }
+
+          if (earningsRes.ok) {
+            const earningsData = await earningsRes.json();
+            setEarnings(earningsData.earnings || {});
+          }
+
+          if (payoutsRes.ok) {
+            const payoutsData = await payoutsRes.json();
+            setPayouts(payoutsData.payouts || []);
+          }
+        } else {
+          router.push("/onboarding");
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (isLoaded) {
+      fetchData();
+    }
+  }, [clerkUser, isLoaded, router]);
+
+  if (!isLoaded || loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="h-64 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
   }
 
-  // If already verified, redirect to dashboard
-  if (user?.verificationStatus !== "VERIFIED") {
-    redirect("/doctor/verification");
+  if (!user) {
+    return null;
   }
 
   return (
@@ -60,16 +156,16 @@ export default async function DoctorDashboardPage() {
       <div className="md:col-span-3">
         <TabsContent value="appointments" className="border-none p-0">
           <DoctorAppointmentsList
-            appointments={appointmentsData.appointments || []}
+            appointments={appointments}
           />
         </TabsContent>
         <TabsContent value="availability" className="border-none p-0">
-          <AvailabilitySettings slots={availabilityData.slots || []} />
+          <AvailabilitySettings slots={slots} />
         </TabsContent>
         <TabsContent value="earnings" className="border-none p-0">
           <DoctorEarnings
-            earnings={earningsData.earnings || {}}
-            payouts={payoutsData.payouts || []}
+            earnings={earnings}
+            payouts={payouts}
           />
         </TabsContent>
       </div>
