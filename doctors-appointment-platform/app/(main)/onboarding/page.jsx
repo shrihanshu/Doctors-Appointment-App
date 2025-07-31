@@ -31,7 +31,11 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const router = useRouter();
-  const { user: clerkUser } = useUser();
+  const { user: clerkUser, isLoaded } = useUser();
+
+  console.log("Onboarding - Component rendered");
+  console.log("Onboarding - Clerk user loaded:", isLoaded);
+  console.log("Onboarding - Clerk user:", clerkUser);
 
   // React Hook Form setup with Zod validation
   const {
@@ -55,9 +59,8 @@ export default function OnboardingPage() {
 
   // Handle patient role selection
   const handlePatientSelection = async () => {
-    console.log("Onboarding - Patient selection clicked");
-    console.log("Onboarding - Loading state:", loading);
-    console.log("Onboarding - Clerk user:", clerkUser);
+    console.log("Onboarding - Patient selection clicked!");
+    alert("Patient button clicked!"); // Simple alert to test if click works
     
     if (loading || !clerkUser) {
       console.log("Onboarding - Early return due to loading or no user");
@@ -108,6 +111,8 @@ export default function OnboardingPage() {
 
   // Handle doctor form submission
   const onDoctorSubmit = async (formData) => {
+    console.log("Onboarding - Doctor form submitted!");
+    
     if (loading || !clerkUser) return;
 
     setLoading(true);
@@ -154,10 +159,7 @@ export default function OnboardingPage() {
           </div>
         )}
         
-        <Card
-          className="border-emerald-900/20 hover:border-emerald-700/40 cursor-pointer transition-all"
-          onClick={() => !loading && handlePatientSelection()}
-        >
+        <Card className="border-emerald-900/20 hover:border-emerald-700/40 transition-all">
           <CardContent className="pt-6 pb-6 flex flex-col items-center text-center">
             <div className="p-4 bg-emerald-900/20 rounded-full mb-4">
               <User className="h-8 w-8 text-emerald-400" />
@@ -172,6 +174,7 @@ export default function OnboardingPage() {
             <Button
               className="w-full mt-2 bg-emerald-600 hover:bg-emerald-700"
               disabled={loading}
+              onClick={handlePatientSelection}
             >
               {loading ? (
                 <>
@@ -185,10 +188,7 @@ export default function OnboardingPage() {
           </CardContent>
         </Card>
 
-        <Card
-          className="border-emerald-900/20 hover:border-emerald-700/40 cursor-pointer transition-all"
-          onClick={() => !loading && setStep("doctor-form")}
-        >
+        <Card className="border-emerald-900/20 hover:border-emerald-700/40 transition-all">
           <CardContent className="pt-6 pb-6 flex flex-col items-center text-center">
             <div className="p-4 bg-emerald-900/20 rounded-full mb-4">
               <Stethoscope className="h-8 w-8 text-emerald-400" />
@@ -203,6 +203,7 @@ export default function OnboardingPage() {
             <Button
               className="w-full mt-2 bg-emerald-600 hover:bg-emerald-700"
               disabled={loading}
+              onClick={() => setStep("doctor-form")}
             >
               Continue as Doctor
             </Button>
