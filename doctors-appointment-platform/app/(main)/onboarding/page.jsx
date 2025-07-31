@@ -22,18 +22,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { setUserRole } from "@/actions/onboarding";
 import { doctorFormSchema } from "@/lib/schema";
 import { SPECIALTIES } from "@/lib/specialities";
-import useFetch from "@/hooks/use-fetch";
-import { useEffect } from "react";
+import { useUser } from "@clerk/nextjs";
 
 export default function OnboardingPage() {
   const [step, setStep] = useState("choose-role");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const router = useRouter();
-
-  // Custom hook for user role server action
-  const { loading, data, fn: submitUserRole } = useFetch(setUserRole);
+  const { user: clerkUser } = useUser();
 
   // React Hook Form setup with Zod validation
   const {
@@ -57,38 +55,105 @@ export default function OnboardingPage() {
 
   // Handle patient role selection
   const handlePatientSelection = async () => {
-    if (loading) return;
+    console.log("Onboarding - Patient selection clicked");
+    console.log("Onboarding - Loading state:", loading);
+    console.log("Onboarding - Clerk user:", clerkUser);
+    
+    if (loading || !clerkUser) {
+      console.log("Onboarding - Early return due to loading or no user");
+      return;
+    }
 
-    const formData = new FormData();
-    formData.append("role", "PATIENT");
+    setLoading(true);
+    setError(null);
 
-    await submitUserRole(formData);
+    try {
+      console.log("Onboarding - Making API call to /api/user/set-role");
+      
+      const requestBody = { 
+        role: "PATIENT",
+        clerkUserId: clerkUser.id 
+      };
+      console.log("Onboarding - Request body:", requestBody);
+      
+      const response = await fetch('/api/user/set-role', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      console.log("Onboarding - Response status:", response.status);
+      console.log("Onboarding - Response ok:", response.ok);
+
+      const data = await response.json();
+      console.log("Onboarding - Response data:", data);
+
+      if (response.ok && data.success) {
+        console.log("Onboarding - Success, redirecting to:", data.redirect);
+        router.push(data.redirect);
+      } else {
+        console.log("Onboarding - Error in response:", data.error);
+        setError(data.error || 'Failed to set user role');
+      }
+    } catch (error) {
+      console.error('Onboarding - Error setting user role:', error);
+      setError('An error occurred while setting your role');
+    } finally {
+      console.log("Onboarding - Setting loading to false");
+      setLoading(false);
+    }
   };
 
-  useEffect(() => {
-    if (data && data?.success) {
-      router.push(data.redirect);
+  // Handle doctor form submission
+  const onDoctorSubmit = async (formData) => {
+    if (loading || !clerkUser) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/user/set-role', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          role: "DOCTOR",
+          specialty: formData.specialty,
+          experience: formData.experience,
+          credentialUrl: formData.credentialUrl,
+          description: formData.description,
+          clerkUserId: clerkUser.id
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        router.push(data.redirect);
+      } else {
+        setError(data.error || 'Failed to submit doctor profile');
+      }
+    } catch (error) {
+      console.error('Error submitting doctor profile:', error);
+      setError('An error occurred while submitting your profile');
+    } finally {
+      setLoading(false);
     }
-  }, [data]);
-
-  // Added missing onDoctorSubmit function
-  const onDoctorSubmit = async (data) => {
-    if (loading) return;
-
-    const formData = new FormData();
-    formData.append("role", "DOCTOR");
-    formData.append("specialty", data.specialty);
-    formData.append("experience", data.experience.toString());
-    formData.append("credentialUrl", data.credentialUrl);
-    formData.append("description", data.description);
-
-    await submitUserRole(formData);
   };
 
   // Role selection screen
   if (step === "choose-role") {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {error && (
+          <div className="col-span-full mb-4 p-4 bg-red-900/20 border border-red-900/30 rounded-lg">
+            <p className="text-red-400">{error}</p>
+          </div>
+        )}
+        
         <Card
           className="border-emerald-900/20 hover:border-emerald-700/40 cursor-pointer transition-all"
           onClick={() => !loading && handlePatientSelection()}
@@ -160,6 +225,12 @@ export default function OnboardingPage() {
               Please provide your professional details for verification
             </CardDescription>
           </div>
+
+          {error && (
+            <div className="mb-4 p-4 bg-red-900/20 border border-red-900/30 rounded-lg">
+              <p className="text-red-400">{error}</p>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit(onDoctorSubmit)} className="space-y-6">
             <div className="space-y-2">
