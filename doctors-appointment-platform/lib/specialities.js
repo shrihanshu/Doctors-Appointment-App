@@ -1,83 +1,66 @@
-import {
-  HeartPulse,
-  Stethoscope,
-  Bone,
-  Eye,
-  Baby,
-  Brain,
-  Flower2,
-  Target,
-  Milestone,
-  Microscope,
-  Timer,
-  Thermometer,
-  Activity,
-  CircleDot,
-} from "lucide-react";
-
 export const SPECIALTIES = [
   {
     name: "General Medicine",
-    icon: <Stethoscope className="h-5 w-5" />,
+    icon: "🩺",
   },
   {
     name: "Cardiology",
-    icon: <HeartPulse className="h-5 w-5" />,
+    icon: "❤️",
   },
   {
     name: "Dermatology",
-    icon: <CircleDot className="h-5 w-5" />,
+    icon: "🔴",
   },
   {
     name: "Endocrinology",
-    icon: <Timer className="h-5 w-5" />,
+    icon: "⏰",
   },
   {
     name: "Gastroenterology",
-    icon: <Thermometer className="h-5 w-5" />,
+    icon: "🌡️",
   },
   {
     name: "Neurology",
-    icon: <Brain className="h-5 w-5" />,
+    icon: "🧠",
   },
   {
     name: "Obstetrics & Gynecology",
-    icon: <Flower2 className="h-5 w-5" />,
+    icon: "🌸",
   },
   {
     name: "Oncology",
-    icon: <Target className="h-5 w-5" />,
+    icon: "🎯",
   },
   {
     name: "Ophthalmology",
-    icon: <Eye className="h-5 w-5" />,
+    icon: "👁️",
   },
   {
     name: "Orthopedics",
-    icon: <Bone className="h-5 w-5" />,
+    icon: "🦴",
   },
   {
     name: "Pediatrics",
-    icon: <Baby className="h-5 w-5" />,
+    icon: "👶",
   },
   {
     name: "Psychiatry",
-    icon: <Brain className="h-5 w-5" />,
+    icon: "🧠",
   },
   {
     name: "Pulmonology",
-    icon: <Activity className="h-5 w-5" />,
+    icon: "🫁",
   },
   {
     name: "Radiology",
-    icon: <CircleDot className="h-5 w-5" />,
+    icon: "🔴",
   },
   {
     name: "Urology",
-    icon: <Milestone className="h-5 w-5" />,
+    icon: "📍",
   },
   {
     name: "Other",
-    icon: <Microscope className="h-5 w-5" />,
+    icon: "🔬",
   },
 ];
